@@ -9,14 +9,15 @@ current_directory=os.getcwd()
 
 def main():
     # Load the model
-    model = YOLO(os.path.join(current_directory,r"detect\train13\weights\best.pt"))
+    model = YOLO(os.path.join(current_directory,r"detect\16-512-25Epochs\weights\best.pt"))
 
     # Start the webcam
-    # cap = cv2.VideoCapture(0)
-    cap = cv2.VideoCapture(os.path.join(current_directory,r"test_video\10-MaleGlasses-Trim.avi"))  
+    cap = cv2.VideoCapture(0)
+    # cap = cv2.VideoCapture(os.path.join(current_directory,r"test_video\10-MaleGlasses-Trim.avi"))  
     fps=cap.get(cv2.CAP_PROP_FPS)
     frame_duration=1/fps
     frame_number=0
+    print("FPS: ",fps)
 
     # Initialize the dictionary to keep track of detection times and last durations
     detections = {
@@ -41,9 +42,6 @@ def main():
             with record_function("model_inference"):
                 # Perform inference
                 results = model.predict(frame, conf=0.6)
-
-            # Current time in seconds
-            current_time = time.time()
 
             # Track which classes are currently detected
             current_detections = set()
@@ -78,6 +76,9 @@ def main():
 
             # Convert frame counts to time using FPS
             for class_name in detections:
+                #this default frames per second are 30FPS -> and the duration for each frame are 1/30 ~ 0.33
+                #for instance, if the closed-eyes class are detected for 65 frames consecutively
+                #that means the durations of detected closed-eyes are 65*0.03 which are 1.95s
                 detections[class_name]['duration'] = detections[class_name]['frame_count'] * frame_duration
 
             # Detect drowsiness based on the duration of closed-eyes and yawn
@@ -85,7 +86,7 @@ def main():
             yawn_duration = detections['yawn']['duration']
             
             # Logic for detecting drowsiness
-            if closed_eyes_duration > 2.0 or yawn_duration > 1.5:  # thresholds in seconds
+            if closed_eyes_duration > 0.5 or yawn_duration > 5.0:  # thresholds in seconds
                 drowsy_state = True
             else:
                 drowsy_state = False
@@ -94,9 +95,19 @@ def main():
             print(f"Closed-eyes duration: {closed_eyes_duration:.2f} seconds")
             print(f"Yawn duration: {yawn_duration:.2f} seconds")
             print(f"Drowsy state: {drowsy_state}")
+            
+            # #debugging drowsy state (delete later)
+            # drowsy_state=True
+            #Drowsy State Branch Logic
+            if drowsy_state is True:
+                #                     x1, y1     x2,  y2    r,    g ,  b    (lupa ini apa)
+                cv2.rectangle(frame, (500, 20), (640, 60), (255, 255, 255), -1)
+                cv2.putText(frame, 'Drowsy', (500, 50), cv2.FONT_HERSHEY_DUPLEX, 1, (0, 0, 255), 2)
+                #continue adding logic regarding drowsy state here
+                #drowsy counter (?)
 
             """
-            Display Function
+            Static Information Display Function
             """
             #drawing and writing the annotation
             cv2.rectangle(frame, (0, 10), (200, 60), (255, 255, 255), -1)
@@ -105,8 +116,7 @@ def main():
             y_offset += 20
             cv2.putText(frame, f'yawn: {yawn_duration:.2f} s', (10, y_offset), cv2.FONT_HERSHEY_DUPLEX, 0.5, (0, 0, 0), 2)
             y_offset += 20
-            if drowsy_state is True:
-                
+            
 
             # Display the frame
             cv2.imshow('Inference-YOLOv8n', frame)
