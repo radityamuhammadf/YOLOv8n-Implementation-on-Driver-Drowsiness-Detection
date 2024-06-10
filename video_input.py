@@ -16,27 +16,31 @@ def main():
             'light_sufficient': True,
             'looking_lr': False,
             'detected_drowsiness': [],
-            'ground_truth_drowsiness': []
+            'ground_truth_drowsiness': [],
+            'inference_time':[]
         },
         'debug_video_sample': {
             'path': os.path.join(current_directory, 'test_video\debugging_sample.avi'),
             'light_sufficient': True,
             'looking_lr': False,
             'detected_drowsiness': [],
-            'ground_truth_drowsiness': []
+            'ground_truth_drowsiness': [],
+            'inference_time':[]
         }
     }
     # #example of adding metadata (used later for the four video data)
-    # videos_metadata[video_name] = {
+    # videos_metadata['video_name'] = {
     #     'path': os.path.join(current_directory, 'path/to/another/vid'),
     #     'light_sufficient': False,
     #     'looking_lr': True,
     #     'detected_drowsiness': [0.1, 0.3, 0.5],  # Example list of floats
-    #     'ground_truth_drowsiness': [0.2, 0.4, 0.6]  # Example list of floats
+    #     'ground_truth_drowsiness': [0.2, 0.4, 0.6],  # Example list of floats
+    #     'inference_time':0
     # }
 
     #iterating every metadata element in every 'video_name' (videos_metadata members) element
     for video_name, metadata in videos_metadata.items():
+        temp_inference_time = []
         video_path = metadata['path']
         # Start the webcam
         cap = cv2.VideoCapture(video_path)
@@ -52,7 +56,7 @@ def main():
             'yawn': {'duration': 0, 'frame_count': 0, 'last_seen_frame': None}
         }
 
-        videos_metadata
+        # videos_metadata
 
         drowsy_state = False
 
@@ -63,7 +67,10 @@ def main():
             frame_number += 1 
 
             # Perform inference
+            inference_start=time.time()
             results = model.predict(frame, conf=0.6)
+            inference_end=time.time()
+            temp_inference_time.append(inference_end-inference_start) 
 
             # Track which classes are currently detected
             current_detections = set()
@@ -136,11 +143,15 @@ def main():
 
             # Display the frame
             cv2.imshow('Inference-YOLOv8n', frame)
-
+            
             # Break the loop
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
+        #insert printing logic in here
+        #For Inference Time (counting inference time average):
+        metadata['inference_time']=sum(temp_inference_time)/len(temp_inference_time)
+        print(metadata['inference_time']) #debugging prompt
         # Release the VideoCapture object
         cap.release()
     cv2.destroyAllWindows()
